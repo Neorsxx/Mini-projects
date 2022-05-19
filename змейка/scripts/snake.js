@@ -1,193 +1,206 @@
-const gameField = document.getElementById('game__field')
-const line = document.querySelectorAll('.line')
-const px = document.querySelectorAll('.px')
-let apple = document.createElement("div") // Создание дива
+const canvas = document.getElementById('canvas')
+let ctx = canvas.getContext('2d');
+
+const config = {
+    sizeCell: 20,
+    gameSpeed: 10
+}
+
+const snake = {
+    x: 240,
+    y: 240,
+    snakeBox: [],
+    maxSize: 1
+}
+
+let apple = {
+    x: 0,
+    y: 0,
+    sizeApple: 20,
+    exist: false
+}
+
+let motion = {
+    r: 1,
+    l: 0,
+    u: 0,
+    d: 0
+}
 
 let gameStart = false
 
-let snake = []
-let snakeSize = 1
-
-let positionX = 10
-let positionY = 10
-
-let applePositionX
-let applePositionY
-
-let randomPostionX
-let randomPostionY
-
-// Проверка стены
-
-let wall = false
-
-// Направление движения
-
-let up = 0
-let down = 0
-let right = 1
-let left = 0
+window.onload = drawField();
 
 
-// Скорость змейки 
-
-let snakeSpeed = 1000 / 5
-
-let loop = setInterval(gameLoop, snakeSpeed)
-
-// Весь игровой процесс
-
-function gameLoop() {
-
-    getPositionsApple(20);
-
-    // Движение
-
-    if (up == 1 && gameStart) {
-        positionX -= 1
-        move();
-    }
-
-    if (down == 1 && gameStart) {
-        positionX += 1
-        move();
-    }
-
-    if (right == 1 && gameStart) {
-        positionY += 1
-        move();
-    }
-
-    if (left == 1 && gameStart) {
-        positionY -= 1
-        move();
-    }
-
-    function move() {
-
-        if (line[positionY] == undefined && positionY >= 20) {
-            wall = true
-            positionY = 0
-            wallCollision();
-        }
-
-        if (line[positionY] == undefined && positionY <= -1) {
-            wall = true
-            positionY = 19
-            wallCollision();
-        }
-
-        if (line[positionY].children[positionX] == undefined && positionX <= -1) {
-            wall = true
-            positionX = 19
-            wallCollision();
-        }
-
-        if (line[positionY].children[positionX] == undefined && positionX >= 20) {
-            wall = true
-            positionX = 0
-            wallCollision();
-        }
-
-        // Проверка стены
-
-        if (!wall) {
-            snake.unshift(line[positionY].children[positionX])
-            snake[0].classList.toggle('snake')
-            snake[snakeSize].classList.toggle('snake')
-            snake.pop()
-        }
-
-        // Создание яблока 
-
-        if (gameField.attributes[2].nodeValue == 0) {
-            apple.className = "apple"
-            apple.appendChild(document.createTextNode(gameField.children[randomPostionX].children[randomPostionY].innerHTML))
-            gameField.children[randomPostionX].children[randomPostionY].innerHTML = ''
-            gameField.children[randomPostionX].children[randomPostionY].appendChild(apple)
-            applePositionX = randomPostionX
-            applePositionY = randomPostionY
-            gameField.attributes[2].nodeValue = 1
-        }   
-
-        if (gameField.children[positionY].children[positionX].innerHTML == '<div class="apple"></div>') {
-            snakeSize += 1
-            gameField.children[applePositionX].children[applePositionY].removeChild(apple)
-            gameField.attributes[2].nodeValue = 0
-        }
-
-    }
-
-
-    // Получение рандомного числа для спавна яблок
-
-    function getPositionsApple(number) {
-        randomPostionX = Math.floor(Math.random() * number);
-        randomPostionY = Math.floor(Math.random() * number);
-    }
-
-
+function drawField() {
+    ctx.fillStyle = "#000"
+    ctx.fillRect(0, 0, 500, 500)
 }
 
 
-// Проверка столкновения со стеной
+function startGame() {
 
-function wallCollision() {
-    snake.unshift(line[positionY].children[positionX])
-    snake[snakeSize].classList.toggle('snake')
-    snake.pop()
-    snake[0].classList.toggle('snake')
-    wall = false
+    const score = document.querySelector('.score__counter')
+    score.textContent = snake.maxSize * 10
+
+    if (gameStart == true) {
+
+        let gameLoop = setInterval(drawSnake, 1000 / 15)
+
+        function drawSnake() {
+
+
+            // В массив вносится каждый координат пройденного квадрата
+            snake.snakeBox.unshift([snake.x, snake.y])
+
+            // Закрашиваем после змейки черными квадаратами поля, если больше размера змеи
+            for (let i = snake.maxSize; i < snake.snakeBox.length; i++) {
+                ctx.fillStyle = "#000"
+                ctx.fillRect(snake.snakeBox[i][0], snake.snakeBox[i][1], 20, 20)
+            }
+
+            // При столкновении со стеной змейка появится с противоположной стороны
+            if (snake.x == 480 && motion.r == 1) {
+                snake.x = -20
+            }
+
+            if (snake.x == 0 && motion.l == 1) {
+                snake.x = 500
+            }
+
+            if (snake.y == 480 && motion.d == 1) {
+                snake.y = -20
+            }
+
+            if (snake.y == 0 && motion.u == 1) {
+                snake.y = 500
+            }
+
+            // Движение змейки
+            if (motion.r == 1) {
+                snake.x += config.sizeCell
+            }
+
+            if (motion.l == 1) {
+                snake.x -= config.sizeCell
+            }
+
+            if (motion.u == 1) {
+                snake.y -= config.sizeCell
+            }
+
+            if (motion.d == 1) {
+                snake.y += config.sizeCell
+            }
+
+
+            // Кушаем яблоко
+            for (let j = 0; j < snake.snakeBox.length; j++) {
+
+                if (apple.x == snake.snakeBox[j][0] && apple.y == snake.snakeBox[j][1]) {
+                    apple.exist = false
+                    snake.maxSize++;
+                }
+
+                if (!apple.exist) {
+                    randomNumber(0, 500, 20);
+                    drawApple();
+                }
+            }
+
+            // Проверка на соприкосновение головы с хвостом и конец игры
+            for (let k = 1; k < snake.snakeBox.length; k++) {
+
+                if (snake.snakeBox[0][0] == snake.snakeBox[k][0] && snake.snakeBox[0][1] == snake.snakeBox[k][1]) {
+                    clearInterval(gameLoop)
+                    snake.snakeBox = []
+                    snake.maxSize = 1
+                    snake.x = 240
+                    snake.y = 240
+                    gameStart = false
+                    apple.exist = false
+                    drawField()
+                }
+
+            }
+
+            // Отрисовка змеи
+            for (let i = 0; i < snake.maxSize; i++) {
+                ctx.fillStyle = "#050"
+                ctx.fillRect(snake.snakeBox[i][0], snake.snakeBox[i][1], 20, 20)
+            }
+
+            // Обрезаем массив согласно максимальному размеру змейки
+            snake.snakeBox.length = snake.maxSize
+
+            score.textContent = (snake.maxSize - 1) * 10
+            console.log(snake.maxSize)
+
+        }
+
+        randomNumber(0, 500, 20);
+
+        // Получение случайного числа от 0 до 500 для каждой координаты яблока
+        function randomNumber(min, max, num) {
+            apple.x = Math.floor(Math.floor(Math.random() * (max - min + 1) + min) / num) * num
+            apple.y = Math.floor(Math.floor(Math.random() * (max - min + 1) + min) / num) * num
+        }
+
+        // Отрисовка яблока
+        function drawApple() {
+            ctx.fillStyle = "#b84646"
+            ctx.fillRect(apple.x, apple.y, 20, 20)
+            apple.exist = true
+        }
+
+    }
+
+    document.addEventListener('keydown', function (e) {
+
+        console.log(e)
+
+        if (e.key = 'w') {
+        }
+    
+        if (e.code == 'ArrowRight' && motion.l == 0) {
+            motion.r = 1
+            motion.l = 0
+            motion.u = 0
+            motion.d = 0
+        }
+    
+        if (e.code == 'ArrowLeft' && motion.r == 0) {
+            motion.r = 0
+            motion.l = 1
+            motion.u = 0
+            motion.d = 0
+        }
+    
+        if (e.code == 'ArrowUp' && motion.d == 0) {
+            motion.r = 0
+            motion.l = 0
+            motion.u = 1
+            motion.d = 0
+        }
+    
+        if (e.code == 'ArrowDown' && motion.u == 0) {
+            motion.r = 0
+            motion.l = 0
+            motion.u = 0
+            motion.d = 1
+        }
+    
+    })
+    
 }
+
 
 // Слушаем кнопки
+document.addEventListener('keydown', function (e) {
 
-document.addEventListener('keydown', function (event) {
-
-    console.log(event)
-
-    if (event.code == 'Enter') {
-        console.log('Game Started')
+    if (e.isTrusted && !gameStart) {
         gameStart = true
-        snake.unshift(line[positionY].children[positionX])
-        snake[0].classList.toggle('snake')
+        startGame();
     }
 
-    if (event.code == 'Escape') {
-        console.log('Game Stopped')
-        clearInterval(loop)
-        
-    }
-
-    if (event.code == 'ArrowRight' && gameStart == true) {
-        up = 0
-        down = 0
-        right = 1
-        left = 0
-    }
-
-    if (event.code == 'ArrowLeft' && gameStart == true) {
-        up = 0
-        down = 0
-        right = 0
-        left = 1
-    }
-
-    if (event.code == 'ArrowUp' && gameStart == true) {
-        up = 1
-        down = 0
-        right = 0
-        left = 0
-    }
-
-    if (event.code == 'ArrowDown' && gameStart == true) {
-        up = 0
-        down = 1
-        right = 0
-        left = 0
-    }
-
-
-
-});
-
+})
